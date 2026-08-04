@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "dataset": "rag_qa",
+    "sut": "minimal-rag",
+    "judge": "gpt-small",
+    "cases": 30,
+    "total_cost_usd": 0.029175
+  },
+  "means": {
+    "answer_length": 624.2,
+    "answer_relevancy": 0.7572,
+    "context_precision": 1.0,
+    "context_recall": 0.8521,
+    "faithfulness": 0.9345,
+    "judge_actionability": 4.0,
+    "judge_completeness": 4.7333,
+    "judge_overall": 0.8683,
+    "judge_technical_accuracy": 4.6333,
+    "position_flip": 0.2667
+  },
+  "derived": {
+    "position_flip_rate": 0.2667,
+    "verbosity_correlation": 0.2686
+  }
+}

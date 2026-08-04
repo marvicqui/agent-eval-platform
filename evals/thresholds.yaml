@@ -1,0 +1,35 @@
+# Quality gate thresholds. Starting points from RAGAS/industry practice —
+# CALIBRATED against real runs in phase 4 (see docs/metrics.md for why each
+# number is what it is). Every change to this file is a reviewable decision.
+#
+# Rule shape per metric:
+#   min / max                — absolute floor/ceiling for the run mean
+#   regression_tolerance     — max allowed drop vs the committed baseline mean
+#
+# Not listed here on purpose:
+# - forbidden_tool_calls: hard-coded hard fail in thresholds.py (not tunable)
+# - position_flip_rate / verbosity_correlation: reported as judge-bias
+#   monitors; they become gates once the judge runs on a different model
+#   than the SUT (blocked on gpt-large quota — see judge-failure-modes.md)
+metrics:
+  faithfulness:
+    min: 0.85
+    regression_tolerance: 0.05
+  # Calibrated 2026-08-04 from the first full run (mean 0.757, min 0.40,
+  # max 0.96, n=30). RAGAS answer_relevancy is embedding-similarity based
+  # and runs structurally low on terse technical Q&A with citation
+  # suffixes; 0.80 (the pre-data starting point) sat above the honest mean
+  # of a system whose answers the judge rates 0.87. The floor catches
+  # broken relevance; the regression tolerance does the real gating work.
+  answer_relevancy:
+    min: 0.70
+    regression_tolerance: 0.05
+  context_precision:
+    min: 0.70
+    regression_tolerance: 0.05
+  context_recall:
+    min: 0.70
+    regression_tolerance: 0.05
+  judge_overall:
+    min: 0.70
+    regression_tolerance: 0.05

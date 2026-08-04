@@ -75,7 +75,27 @@ flowchart TB
 See `.env.example`. Never commit `.env`.
 
 ## Current state
-Phase: 3 of 6 completed (evaluators). Working now (on top of phases 0-2):
+Phase: 4 of 6 completed (scorecard + thresholds + calibration tooling).
+- `aep run` now evaluates (trajectory + judge + RAG) and stores scores;
+  `aep report` renders the scorecard, applies the gate (exit 1 on fail) and
+  can --update-baseline; `aep calibrate --make-template` generated the
+  20-case annotation sheet in evals/calibration/ (WAITING ON MARIO's
+  hand-scores as human_labels.jsonl before `aep calibrate` can run).
+- Real measured baselines committed (evals/baseline.json): faithfulness
+  0.934, answer_relevancy 0.757, context_precision 1.0, context_recall
+  0.852, judge_overall 0.868, position_flip_rate 0.267 (monitor, honest,
+  diagnosed in docs/metrics.md), verbosity_correlation 0.269. agent_tasks:
+  tool_precision/recall 1.0, forbidden 0.
+- answer_relevancy threshold calibrated 0.80→0.70 from real data — the
+  reasoning is in evals/thresholds.yaml and docs/metrics.md; do not revert
+  without re-reading it.
+- Full evaluated run: ~26 min wall at concurrency 4, ~$0.03 SUT cost/run.
+Next: Phase 5 — CI gate (ci.yml + eval.yml already drafted in
+.github/workflows/), OIDC app federation for this repo, repo
+variables/secrets, then the demo PR that degrades a prompt to show the gate
+red, and its fix. ADR-0004.
+
+Phase 3 notes (evaluators):
 - Trajectory oracle (deterministic, LLM-free): precision/recall, forbidden
   calls (hard fail), loop detection, ordering checks — 39 tests pass.
 - JudgeEvaluator: YAML rubric, JSON validated with pydantic (1 retry then
