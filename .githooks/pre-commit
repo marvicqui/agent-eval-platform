@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Block any commit that introduces a secret. This repo is public.
+set -euo pipefail
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --staged --no-banner --redact
+else
+  echo "WARN: gitleaks not installed; relying on the CI secret scan." >&2
+fi

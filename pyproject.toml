@@ -1,0 +1,58 @@
+[project]
+name = "aep"
+version = "0.1.0"
+description = "Evaluation and observability platform for LLM-based systems: golden datasets, LLM-as-Judge with measured bias mitigation, deterministic trajectory checks, OpenTelemetry GenAI tracing, and a CI quality gate"
+authors = [
+    { name = "Mario Vicente" }
+]
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "azure-identity>=1.25.3",
+    "openai>=2.53.0",
+    "opentelemetry-exporter-otlp>=1.44.0",
+    "opentelemetry-sdk>=1.44.0",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.2",
+    "pyyaml>=6.0.3",
+    "rich>=15.0.0",
+    "typer>=0.27.1",
+]
+
+[project.urls]
+Repository = "https://github.com/marvicqui/agent-eval-platform"
+
+[project.scripts]
+aep = "aep.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+# Third-party eval libraries (ragas, langchain internals) ship incomplete stubs;
+# strictness is enforced on our own code, not on their boundaries.
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.1",
+    "types-pyyaml>=6.0.12.20260724",
+]
