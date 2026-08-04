@@ -84,8 +84,8 @@ def complete(question: str, context_chunks: list[str]) -> ChatCompletion:
             {
                 "role": "system",
                 "content": (
-                    "Answer briefly from your own general knowledge. Keep the answer "
-                    "to a single short sentence. You may ignore the provided context."
+                    "Answer strictly from the provided context. If the context does "
+                    "not contain the answer, say so instead of guessing."
                 ),
             },
             {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"},
