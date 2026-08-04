@@ -13,6 +13,7 @@ Usage:
     uv run python examples/minimal_sut.py
 """
 
+import asyncio
 import math
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
@@ -22,6 +23,7 @@ from openai.types.create_embedding_response import CreateEmbeddingResponse
 from rich import print as rprint
 
 from aep.config import get_settings
+from aep.dataset.loader import load_dataset
 from aep.instrumentation import (
     flush,
     init_tracing,
@@ -29,49 +31,27 @@ from aep.instrumentation import (
     traced_llm_call,
     traced_tool_call,
 )
+from aep.runner.types import SUTResult
 
-# A deliberately tiny corpus: public Microsoft Learn excerpts (paraphrased,
-# with source URLs). Real corpora arrive with projects 02-03; the point here
-# is the instrumentation, not retrieval quality.
-CORPUS: list[dict[str, str]] = [
-    {
-        "text": (
-            "An Azure landing zone is an environment that follows key design "
-            "principles across eight design areas, enabling application migration, "
-            "modernization and innovation at scale. Platform landing zones provide "
-            "shared services (identity, connectivity, management) and application "
-            "landing zones host workloads."
-        ),
-        "source": "https://learn.microsoft.com/azure/cloud-adoption-framework/ready/landing-zone/",
-    },
-    {
-        "text": (
-            "Hub-spoke is the recommended network topology: the hub virtual network "
-            "hosts shared services such as Azure Firewall, ExpressRoute/VPN gateways "
-            "and DNS, while spoke virtual networks host workloads and peer to the hub. "
-            "Spokes should not be peered to each other directly unless traffic "
-            "inspection is not required."
-        ),
-        "source": "https://learn.microsoft.com/azure/cloud-adoption-framework/ready/azure-best-practices/hub-spoke-network-topology",
-    },
-    {
-        "text": (
-            "The Azure Well-Architected Framework rests on five pillars: reliability, "
-            "security, cost optimization, operational excellence and performance "
-            "efficiency. Each pillar has design principles and a review checklist."
-        ),
-        "source": "https://learn.microsoft.com/azure/well-architected/pillars",
-    },
-    {
-        "text": (
-            "Management groups organize subscriptions into a hierarchy for unified "
-            "policy and access management. Azure Policy assignments at a management "
-            "group scope are inherited by all child subscriptions, which is how "
-            "landing-zone guardrails are enforced at scale."
-        ),
-        "source": "https://learn.microsoft.com/azure/governance/management-groups/overview",
-    },
-]
+# The corpus is the pool of ground-truth context chunks from the golden
+# dataset — the same documents a real landing-zone knowledge base would hold.
+# Deriving it from the dataset (contexts only, never expected answers) makes
+# retrieval genuinely measurable: the retriever must find the right chunk
+# among ~30, not among 4 toys.
+
+
+def _build_corpus() -> list[dict[str, str]]:
+    corpus: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for case in load_dataset("rag_qa"):
+        for chunk in case.context or []:
+            if chunk not in seen:
+                seen.add(chunk)
+                corpus.append({"text": chunk, "source": case.expected.source or "unknown"})
+    return corpus
+
+
+CORPUS: list[dict[str, str]] = _build_corpus()
 
 QUESTIONS = [
     "What network topology does the Cloud Adoption Framework recommend, "
@@ -122,8 +102,9 @@ def _cosine(a: list[float], b: list[float]) -> float:
 def retrieve(question: str, top_k: int = 2) -> list[dict[str, str]]:
     """Embed the question and the corpus, return the top_k closest chunks.
 
-    Re-embedding the corpus on every call is wasteful and fine: four chunks,
-    fractions of a cent, zero index-management code to explain.
+    Re-embedding the ~30 chunks on every call is wasteful and fine: one
+    embeddings request, fractions of a cent, zero index-management code to
+    explain. A vector store here would be complexity theater.
     """
     response = embed([question] + [doc["text"] for doc in CORPUS])
     vectors = [item.embedding for item in response.data]
@@ -142,6 +123,35 @@ def answer(question: str) -> str:
     response = complete(question, [c["text"] for c in chunks])
     sources = ", ".join(c["source"] for c in chunks)
     return f"{response.choices[0].message.content}\n[sources: {sources}]"
+
+
+class MinimalRagSUT:
+    """SystemUnderTest adapter so `aep run` can evaluate this example.
+
+    The underlying OpenAI client is sync; asyncio.to_thread keeps the async
+    protocol honest without an async client rewrite. contextvars propagate
+    into the thread, so per-case cost attribution still works.
+    """
+
+    name = "minimal-rag"
+
+    async def run(self, question: str) -> SUTResult:
+        return await asyncio.to_thread(self._run_sync, question)
+
+    @traced_agent_run(agent_name="minimal-rag")
+    def _run_sync(self, question: str) -> SUTResult:
+        chunks = retrieve(question)
+        response = complete(question, [c["text"] for c in chunks])
+        return SUTResult(
+            answer=response.choices[0].message.content or "",
+            retrieved_contexts=[c["text"] for c in chunks],
+            tool_calls=["retrieve"],
+        )
+
+
+def build_sut() -> MinimalRagSUT:
+    """Factory the `aep run --sut` convention requires."""
+    return MinimalRagSUT()
 
 
 def main() -> None:

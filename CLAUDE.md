@@ -75,13 +75,20 @@ flowchart TB
 See `.env.example`. Never commit `.env`.
 
 ## Current state
-Phase: 1 of 6 completed (instrumentation). `uv run python examples/minimal_sut.py`
-runs end-to-end (Entra auth, gpt-5-mini) and traces land in Langfuse Cloud with
-tokens and computed cost per request (verified via Langfuse API: invoke_agent
-traces with 4 observations, totalCost populated). ADR-0001 written.
-Next: Phase 2 — golden dataset (30+ Azure WAF/CAF cases, 3 difficulty levels)
-and the async runner + SystemUnderTest protocol. Acceptance: `aep run` executes
-all cases with capped concurrency and emits per-case JSON results.
+Phase: 2 of 6 completed (dataset + runner). Working now:
+- Golden datasets: `rag_qa` (30 Azure WAF/CAF cases, 6 categories x 3
+  difficulties, each with required_points + source + ground-truth context) and
+  `agent_tasks` (6 cases with trajectory expectations). Strict loader with
+  line-number errors; 12 unit tests pass.
+- `aep run --dataset rag_qa --sut examples.minimal_sut` executed 30/30 cases
+  in 130s, total cost $0.028, per-case cost/tokens/latency attributed via a
+  contextvar accumulator fed by the tracing decorators.
+- The example SUT's corpus derives from the dataset's context chunks (~30),
+  so retrieval quality is genuinely measurable.
+- ADR-0002 written (dataset in git).
+Next: Phase 3 — evaluators (RAGAS wrappers, judge with the three bias
+mitigations implemented AND measured, deterministic trajectory oracle with
+LLM-free tests, docs/judge-failure-modes.md, ADR-0003).
 Pending owner action: rename the Langfuse project ("My Project" →
 agent-eval-platform) and screenshot a trace for the README (phase 6).
 

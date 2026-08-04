@@ -10,3 +10,4 @@ dist/
 .terraform/
 *.tfstate*
 .DS_Store
+evals/runs/

@@ -21,6 +21,7 @@ from opentelemetry import trace
 
 from aep.config import get_settings
 from aep.instrumentation import conventions as c
+from aep.instrumentation import cost as cost_tracking
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -48,11 +49,14 @@ def _record_llm_response(span: trace.Span, response: Any) -> None:
     span.set_attribute(c.GEN_AI_USAGE_OUTPUT_TOKENS, output_tokens)
 
     price = get_settings().price_for(model) if model else None
-    if price is None:
+    cost_usd = None if price is None else price.cost_usd(input_tokens, output_tokens)
+    if cost_usd is None:
         # Unknown price must surface as unknown, never as $0.00.
         span.set_attribute(c.AEP_COST_UNKNOWN, True)
     else:
-        span.set_attribute(c.AEP_COST_USD, price.cost_usd(input_tokens, output_tokens))
+        span.set_attribute(c.AEP_COST_USD, cost_usd)
+    # Feed the per-case accumulator so the runner can attribute spend.
+    cost_tracking.record(model or "unknown", input_tokens, output_tokens, cost_usd)
 
 
 def _traced(
