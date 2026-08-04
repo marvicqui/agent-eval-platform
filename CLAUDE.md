@@ -75,7 +75,30 @@ flowchart TB
 See `.env.example`. Never commit `.env`.
 
 ## Current state
-Phase: 4 of 6 completed (scorecard + thresholds + calibration tooling).
+Phase: 6 of 6 — code and docs complete; two owner actions remain (below).
+- CI gate LIVE and demonstrated: PR #1 (merged) shows the full story — a
+  plausible one-line prompt change made the eval check fail (faithfulness
+  regression 0.861 vs 0.934 baseline; judge_overall 0.661 < 0.70 floor and
+  -0.207 vs baseline; verbosity_correlation jumped to 0.476), the revert
+  commit turned the same gate green. Scorecard comments are on the PR.
+- OIDC: app gha-agent-eval-platform, role = Cognitive Services OpenAI User
+  on the Foundry resource only. GOTCHA: GitHub now presents immutable-ID
+  subjects (repo:marvicqui@43182035/agent-eval-platform@1322565653:...) —
+  federated credentials exist for BOTH formats; if azure/login breaks with
+  AADSTS700213, check the presented subject in the error first.
+- gitleaks in CI needs fetch-depth: 0 (commit-range scan).
+- Infra deployed (rg-aep-dev-eus2: Log Analytics 1GB/day cap + App
+  Insights); `make teardown` verified end-to-end and infra re-deployed.
+- README carries the measured results; docs/img/architecture.svg exported.
+Remaining owner actions:
+1. Hand-annotate 20 cases: evals/calibration/annotation_sheet.md is ready;
+   fill human_labels.template.jsonl scores (1-5), save as
+   human_labels.jsonl, run `aep calibrate`, commit report.md, and paste the
+   Spearman number into the README calibration paragraph.
+2. Langfuse: rename project "My Project" -> agent-eval-platform; screenshot
+   a trace + the PR #1 red check for README/docs/img.
+
+Phase 4 notes (scorecard + thresholds + calibration tooling):
 - `aep run` now evaluates (trajectory + judge + RAG) and stores scores;
   `aep report` renders the scorecard, applies the gate (exit 1 on fail) and
   can --update-baseline; `aep calibrate --make-template` generated the
