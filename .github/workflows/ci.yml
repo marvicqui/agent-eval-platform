@@ -1,0 +1,29 @@
+# Fast, deterministic CI: lint, types, unit tests. Zero LLM calls, zero
+# cloud credentials — this must stay runnable on any fork.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: uv sync --dev
+      - name: Lint
+        run: uv run ruff check src/ tests/ examples/
+      - name: Types
+        run: uv run mypy src/
+      - name: Unit tests (no LLM calls)
+        run: uv run pytest tests/ -v
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

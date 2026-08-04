@@ -1,0 +1,74 @@
+# The quality gate: run the golden dataset on every PR, publish the
+# scorecard as a PR comment, and FAIL the check when a metric drops below
+# threshold or regresses beyond tolerance vs the committed baseline.
+#
+# Auth: Azure via OIDC federation (no stored cloud secrets — ADR-0004).
+# Langfuse keys are repo secrets (they are real credentials, unlike the
+# subscription/tenant ids, which are non-secret reconnaissance-grade
+# variables — see the README security note).
+name: eval
+
+on:
+  pull_request:
+
+permissions:
+  id-token: write # OIDC token for azure/login
+  contents: read
+  pull-requests: write # scorecard comment
+
+concurrency:
+  group: eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: uv sync
+
+      - name: Run evals
+        env:
+          AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+          AZURE_AI_RESOURCE: ${{ vars.AZURE_AI_RESOURCE }}
+          AZURE_AI_RG: ${{ vars.AZURE_AI_RG }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_HOST: ${{ vars.LANGFUSE_HOST }}
+          AEP_ALLOW_SAME_JUDGE: "1" # documented limitation until gpt-large quota
+        run: uv run aep run --dataset rag_qa --sut examples.minimal_sut
+
+      - name: Scorecard + gate
+        id: gate
+        env:
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+        # The gate itself: aep report exits 1 on threshold/regression failure.
+        # continue-on-error so the comment still posts; the outcome is
+        # re-asserted in the last step.
+        continue-on-error: true
+        run: uv run aep report --output scorecard.md
+
+      - name: Comment scorecard on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: scorecard.md
+
+      - name: Enforce gate
+        if: steps.gate.outcome == 'failure'
+        run: |
+          echo "Quality gate failed — see the scorecard comment." >&2
+          exit 1
