@@ -75,10 +75,15 @@ flowchart TB
 See `.env.example`. Never commit `.env`.
 
 ## Current state
-Phase: 0 of 6 (bootstrap). Last completed: repo creation, structure, tooling.
-Next: Phase 1 — OTel instrumentation + Langfuse export. Acceptance: running
-`uv run python examples/minimal_sut.py` produces traces in Langfuse Cloud with
-tokens and cost per request.
+Phase: 1 of 6 completed (instrumentation). `uv run python examples/minimal_sut.py`
+runs end-to-end (Entra auth, gpt-5-mini) and traces land in Langfuse Cloud with
+tokens and computed cost per request (verified via Langfuse API: invoke_agent
+traces with 4 observations, totalCost populated). ADR-0001 written.
+Next: Phase 2 — golden dataset (30+ Azure WAF/CAF cases, 3 difficulty levels)
+and the async runner + SystemUnderTest protocol. Acceptance: `aep run` executes
+all cases with capped concurrency and emits per-case JSON results.
+Pending owner action: rename the Langfuse project ("My Project" →
+agent-eval-platform) and screenshot a trace for the README (phase 6).
 
 ## Decisions already made (do not relitigate)
 - Azure OpenAI / Microsoft Foundry as the only model provider in v1
