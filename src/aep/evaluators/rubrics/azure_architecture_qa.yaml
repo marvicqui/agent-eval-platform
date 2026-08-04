@@ -1,0 +1,28 @@
+# Rubric for Azure architecture Q&A. The judge scores against THESE criteria
+# and nothing else — an explicit rubric is the first defense against the
+# judge free-styling its own standards per case.
+name: azure_architecture_qa
+version: 1
+scale: [1, 5]
+criteria:
+  - id: technical_accuracy
+    weight: 0.4
+    description: "Statements about Azure services, limits and behaviors are factually correct"
+    anchors:
+      1: "Contains a factual error that would cause a failed deployment or outage"
+      3: "Broadly correct but omits a material constraint or nuance"
+      5: "Correct, including limits, defaults and relevant caveats"
+  - id: completeness
+    weight: 0.3
+    description: "Covers the required points listed for this case — coverage of points, never answer length"
+    anchors:
+      1: "Misses most required points"
+      3: "Covers some required points, misses at least one material one"
+      5: "Covers every required point"
+  - id: actionability
+    weight: 0.3
+    description: "A practitioner could act on this answer without further clarification"
+    anchors:
+      1: "Vague or generic; no concrete Azure services or steps"
+      3: "Names the right services but leaves key decisions unstated"
+      5: "Concrete: names services, scopes and the decision criteria to apply"

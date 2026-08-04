@@ -45,12 +45,25 @@ class Settings(BaseSettings):
     judge_deployment: str = Field(default="gpt-small", alias="AEP_JUDGE_DEPLOYMENT")
     embeddings_deployment: str = Field(default="embeddings", alias="AEP_EMBEDDINGS_DEPLOYMENT")
 
+    # Deployment used by the RAGAS evaluators. Constraint: this deployment's
+    # NAME must equal the underlying model name (e.g. deployment "gpt-5-mini"
+    # running gpt-5-mini). RAGAS detects reasoning models by name to map
+    # max_tokens -> max_completion_tokens etc.; Azure routes by deployment
+    # name — naming the deployment after the model satisfies both.
+    ragas_deployment: str = Field(default="gpt-5-mini", alias="AEP_RAGAS_DEPLOYMENT")
+
     # Langfuse Cloud, reached via plain OTLP/HTTP — no vendor SDK (see ADR-0001).
     langfuse_public_key: str = Field(alias="LANGFUSE_PUBLIC_KEY")
     langfuse_secret_key: str = Field(alias="LANGFUSE_SECRET_KEY")
     langfuse_host: str = Field(default="https://cloud.langfuse.com", alias="LANGFUSE_HOST")
 
     max_concurrency: int = Field(default=4, alias="AEP_MAX_CONCURRENCY")
+
+    # Self-preference escape hatch: judging with the SUT's own model is
+    # refused unless this is explicitly set. See evaluators/judge.py and
+    # docs/judge-failure-modes.md — this being true must be mentioned in any
+    # report produced while it is active.
+    allow_same_judge: bool = Field(default=False, alias="AEP_ALLOW_SAME_JUDGE")
 
     prices: dict[str, ModelPrice] = DEFAULT_PRICES
 

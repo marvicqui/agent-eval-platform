@@ -75,22 +75,30 @@ flowchart TB
 See `.env.example`. Never commit `.env`.
 
 ## Current state
-Phase: 2 of 6 completed (dataset + runner). Working now:
-- Golden datasets: `rag_qa` (30 Azure WAF/CAF cases, 6 categories x 3
-  difficulties, each with required_points + source + ground-truth context) and
-  `agent_tasks` (6 cases with trajectory expectations). Strict loader with
-  line-number errors; 12 unit tests pass.
-- `aep run --dataset rag_qa --sut examples.minimal_sut` executed 30/30 cases
-  in 130s, total cost $0.028, per-case cost/tokens/latency attributed via a
-  contextvar accumulator fed by the tracing decorators.
-- The example SUT's corpus derives from the dataset's context chunks (~30),
-  so retrieval quality is genuinely measurable.
-- ADR-0002 written (dataset in git).
-Next: Phase 3 — evaluators (RAGAS wrappers, judge with the three bias
-mitigations implemented AND measured, deterministic trajectory oracle with
-LLM-free tests, docs/judge-failure-modes.md, ADR-0003).
+Phase: 3 of 6 completed (evaluators). Working now (on top of phases 0-2):
+- Trajectory oracle (deterministic, LLM-free): precision/recall, forbidden
+  calls (hard fail), loop detection, ordering checks — 39 tests pass.
+- JudgeEvaluator: YAML rubric, JSON validated with pydantic (1 retry then
+  judge_error), overall computed as weighted sum in code. Bias mitigations
+  implemented AND measured: both-orders pairwise (position_flip metric),
+  answer_length + verbosity_correlation(), self-preference guard
+  (AEP_ALLOW_SAME_JUDGE=1 currently active — documented limitation until
+  gpt-large quota arrives).
+- RagEvaluator over ragas 0.4.3 collections API. Gotchas solved: langchain
+  pinned <1 (ragas imports langchain_community 0.3); a Foundry deployment
+  literally named `gpt-5-mini` exists because ragas detects reasoning models
+  by NAME to map max_tokens->max_completion_tokens while Azure routes by
+  deployment name; max_tokens=8192 (reasoning eats completion budget).
+- Live smoke test on a real case: judge_overall 0.825, faithfulness 0.8,
+  answer_relevancy 0.70, context_precision ~1.0, context_recall 0.75.
+- docs/judge-failure-modes.md + ADR-0003 written.
+Next: Phase 4 — scorecard (aggregate/thresholds/report), thresholds.yaml
+calibrated from real runs, baseline.json, `aep calibrate` (Spearman + kappa
+vs Mario's 20 hand-annotated cases in evals/calibration/human_labels.jsonl —
+NEEDS MARIO), docs/metrics.md.
 Pending owner action: rename the Langfuse project ("My Project" →
-agent-eval-platform) and screenshot a trace for the README (phase 6).
+agent-eval-platform); screenshot for README (phase 6); annotate 20 cases for
+calibration (phase 4).
 
 ## Decisions already made (do not relitigate)
 - Azure OpenAI / Microsoft Foundry as the only model provider in v1
