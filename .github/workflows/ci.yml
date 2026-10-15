@@ -1,33 +1,37 @@
-# Fast, deterministic CI: lint, types, unit tests. Zero LLM calls, zero
-# cloud credentials — this must stay runnable on any fork.
 name: ci
-
 on:
+  pull_request:
   push:
     branches: [main]
-  pull_request:
-
+permissions:
+  contents: read
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
-          # gitleaks scans the commit range; a shallow clone lacks the
-          # parent commit and makes the scan fail on "unknown revision".
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
-      - name: Install
-        run: uv sync --dev
+          version: '0.12.1'
+          python-version: '3.12'
+      - name: Install locked dependencies (package downloads only)
+        run: uv sync --frozen --dev --no-editable
       - name: Lint
-        run: uv run ruff check src/ tests/ examples/
+        run: uv run --frozen --no-sync ruff check src/ tests/ examples/
       - name: Types
-        run: uv run mypy src/
-      - name: Unit tests (no LLM calls)
-        run: uv run pytest tests/ -v
-      - name: Secret scan
+        run: uv run --frozen --no-sync mypy src/
+      - name: Unit tests with socket access denied
+        env:
+          OTEL_SDK_DISABLED: 'true'
+        run: uv run --frozen --no-sync pytest tests/ -v
+      - name: Synthetic trajectory and quality gate demonstration
+        env:
+          OTEL_SDK_DISABLED: 'true'
+        run: uv run --frozen --no-sync python examples/offline_demo.py
+      - name: Secret scan (existing policy retained)
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
