@@ -1,3 +1,7 @@
+> Historical decision: the automatic evaluation described below was replaced
+> on 2026-10-15 by a manual review placeholder. No active workflow logs in to
+> Azure or requests OIDC. Existing Azure federation was not changed.
+
 # ADR-0004: GitHub Actions authenticates to Azure via OIDC federation, not stored secrets
 
 - **Status:** accepted
@@ -10,11 +14,13 @@ The eval workflow must call Azure OpenAI on every pull request. That
 requires an identity. The traditional approach stores a service principal
 secret (client secret or certificate) in GitHub Secrets; the alternative is
 workload identity federation: GitHub's OIDC provider issues a short-lived
-token per job, Azure trusts specific `repo:owner/name:...` subjects, and no
-credential is ever stored anywhere.
+token per job, Azure trusts configured subject claims, and no
+long-lived Azure client secret is stored in the workflow. Langfuse credentials
+remain stored secrets.
 
 ## Decision
 
+Historical configuration (2026-08-04; not revalidated in this refresh):
 OIDC federation. App registration `gha-agent-eval-platform` with two
 federated credentials (`ref:refs/heads/main` and `pull_request`), and a
 single role assignment: **Cognitive Services OpenAI User, scoped to the one
@@ -22,15 +28,14 @@ Foundry resource** — not Contributor, not subscription scope.
 
 ## Rationale
 
-- **Nothing to leak, rotate or expire.** A stored SP secret in a public
+- **No long-lived Azure client secret to rotate.** A stored SP secret in a public
   repo's CI is the classic breach path; a federated token lives minutes and
-  only materializes inside a job run from this exact repo. This is the same
+  is issued to a job subject to the configured trust conditions. OIDC does
+  not itself establish that checked-out PR code is safe. This is the same
   short-lived, single-hop token principle applied to agent identity.
-- **Blast radius by scope.** The identity can call one model endpoint. It
-  cannot deploy, read state, or touch any other resource — a compromised
-  workflow gets inference access and nothing else. This mirrors the
-  platform's own `forbidden_tool_calls` philosophy at the infrastructure
-  layer.
+- **Blast radius by scope.** The intended role is scoped to one inference
+  resource. Actual permissions depend on the role definition and all assigned
+  roles; this ADR is not a current effective-permissions audit.
 - **Auditable trust.** The federated subject strings are reviewable
   configuration; who can obtain the identity is defined by repo + ref, not
   by who once saw a secret.
@@ -50,9 +55,16 @@ Foundry resource** — not Contributor, not subscription scope.
 
 - Local runs and CI runs authenticate differently (developer identity via
   `az login` vs federated SP), so RBAC drift between the two is possible.
-  Both paths converge on `DefaultAzureCredential`, and preflight checks the
-  deployments are reachable, which catches drift at run start.
-- The federation subjects pin this exact repo path; a fork's PRs get tokens
-  for *their* repo subject, which Azure does not trust — fork PRs simply
-  cannot run the eval job (CI still runs; it needs no cloud). Accepted:
-  that is the correct security posture for a public repo.
+  Both paths converge on `DefaultAzureCredential`. Preflight lists deployments
+  but does not prove inference access or validate the Langfuse credentials.
+- Review the actual OIDC subject and Azure trust conditions before relying
+  on isolation of PR code. Repository identity alone is not a complete
+  authorization policy. Credentialed evaluation of external contributions
+  needs deliberate trust handling; deterministic CI needs no cloud credentials.
+
+## Implementation review — 2026-10-10
+
+The historical workflow used Azure OIDC and Langfuse secrets. Current Azure RBAC,
+federation and resource state were not queried. Follow
+[security and data handling](../security.md) before an online run. No workflow,
+identity, credential or repository permission is changed by this review.

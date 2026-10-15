@@ -22,8 +22,9 @@ Plain OpenTelemetry. The Langfuse SDK is not a dependency of this project.
 ## Rationale
 
 - **Migration cost asymmetry.** With OTel, replacing Langfuse Cloud
-  (self-hosted Langfuse, Jaeger, Azure Monitor / App Insights) means changing
-  one exporter endpoint and one auth header in `src/aep/instrumentation/otel.py`.
+  (self-hosted Langfuse, Jaeger, Azure Monitor / App Insights) requires adapting
+  the exporter URL path/authentication in `src/aep/instrumentation/otel.py`.
+  The current `LANGFUSE_HOST` setting alone is not a generic OTLP backend switch.
   With the vendor SDK it means rewriting every instrumented call site in five
   repositories. The planned self-hosting path (Proxmox) makes this a real
   scenario, not a hypothetical.

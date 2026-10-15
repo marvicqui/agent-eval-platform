@@ -1,5 +1,15 @@
 # CLAUDE.md — agent-eval-platform
 
+> Review note — 2026-10-10: implementation is still a portfolio lab. The
+> deployment/phase/run statements below are historical 2026-08-04 notes, not
+> current cloud verification. Human calibration remains pending. Use
+> [docs/architecture.md](docs/architecture.md),
+> [docs/limitations.md](docs/limitations.md), and
+> [docs/validation-2026-10-10.md](docs/validation-2026-10-10.md) for current
+> source boundaries and local evidence. In particular, trajectories read
+> SUT-reported tool names, cost totals exclude evaluator traffic, and failing
+> CI checks do not enforce merge blocking without repository policy.
+
 ## What this is
 Reusable evaluation and observability platform for LLM-based systems. It is the
 shared dependency of four other portfolio projects (azure-architecture-doc-agent,

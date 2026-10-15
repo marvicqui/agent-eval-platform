@@ -11,8 +11,9 @@ with the same care as code.
   this prevents.
 - **Versioned with the code**: a metric regression can be traced to either a
   code change or a dataset change, because both share one history.
-- **Diffable baselines**: `evals/baseline.json` refers to cases by id; git
-  guarantees the ids it references existed at that commit.
+- **Diffable baselines**: `evals/baseline.json` stores aggregate means and dataset metadata.
+  Per-case IDs live in the dataset and run artifacts; the baseline does not
+  preserve raw scores or case-level provenance.
 
 See ADR-0002 for the full reasoning.
 
@@ -32,8 +33,8 @@ See ADR-0002 for the full reasoning.
 2. **Every fact has a source.** `expected.source` links the authoritative doc
    (Microsoft Learn). If you cannot cite it, you cannot golden it.
 3. **`context` is the ground truth for retrieval**, not whatever the SUT
-   happened to retrieve. RAG context-recall compares retrieved chunks against
-   these.
+   happened to retrieve. The current RAGAS context-recall call compares retrieved chunks against
+   the reference answer; the dataset contexts also supply the example corpus.
 4. **Difficulty is about reasoning, not obscurity.** `basic` = single fact,
    `intermediate` = compare/contrast or multi-fact, `advanced` = scenario
    requiring composition of several facts or a trade-off.
@@ -47,5 +48,7 @@ See ADR-0002 for the full reasoning.
    ids are kebab-case and unique across the file).
 2. Run `uv run aep dataset stats <file-stem>` — the loader validates every
    line and fails with line numbers on any problem.
-3. Open a PR. The eval workflow will run the new case; expect the baseline
-   diff to flag the addition.
+3. Review the diff. The credentialed PR workflow currently runs only `rag_qa`;
+   adding an `agent_tasks` case does not automatically add it to that workflow.
+   A baseline comparison measures aggregate changes; it does not flag added
+   case IDs or enforce dataset provenance.

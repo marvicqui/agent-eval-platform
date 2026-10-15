@@ -1,0 +1,38 @@
+# PROPOSAL ONLY: stored outside .github/workflows until owner review.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: '0.12.1'
+          python-version: '3.12'
+      - name: Install locked dependencies (package downloads only)
+        run: uv sync --frozen --dev --no-editable
+      - name: Lint
+        run: uv run --frozen --no-sync ruff check src/ tests/ examples/
+      - name: Types
+        run: uv run --frozen --no-sync mypy src/
+      - name: Unit tests with socket access denied
+        env:
+          OTEL_SDK_DISABLED: 'true'
+        run: uv run --frozen --no-sync pytest tests/ -v
+      - name: Synthetic trajectory and quality gate demonstration
+        env:
+          OTEL_SDK_DISABLED: 'true'
+        run: uv run --frozen --no-sync python examples/offline_demo.py
+      - name: Secret scan (existing policy retained)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

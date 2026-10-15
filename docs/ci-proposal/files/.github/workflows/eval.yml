@@ -1,0 +1,27 @@
+# PROPOSAL ONLY: replace the automatic paid workflow after review.
+# This placeholder never authenticates to Azure and never calls a model.
+name: eval-manual-review
+on:
+  workflow_dispatch:
+    inputs:
+      reviewed_commit:
+        description: 'Full SHA of the revision reviewed for a future evaluation'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Validate reviewed revision
+        env:
+          REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+        shell: bash
+        run: |
+          if [[ ! "$REVIEWED_COMMIT" =~ ^[0-9a-f]{40}$ ]] || [[ "$REVIEWED_COMMIT" != "$GITHUB_SHA" ]]; then
+            echo 'Select the exact reviewed revision before planning a paid evaluation.' >&2
+            exit 1
+          fi
+          echo 'Review recorded. No models called. A paid run requires separate approval and budgeting.'
